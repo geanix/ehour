@@ -1,5 +1,7 @@
 import attr
 
+from ehour.project import Project
+
 
 @attr.s
 class Client(object):
@@ -24,3 +26,11 @@ class Client(object):
                 except KeyError:
                     pass        # Field name not configured
             setattr(self, k, v)
+
+    def projects(self):
+        response = self.api.get(f'clients/{self.id}/projects')
+        projects = []
+        for r in response:
+            projects.append(Project(r['projectId'], r['code'], r['name'],
+                                    r['active']))
+        return projects

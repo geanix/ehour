@@ -55,3 +55,11 @@ class EhourApi(object):
                 client.fill()
             clients.append(client)
         return clients
+
+    def client(self, client, query=None, state='active', fill=False):
+        r = self.get(f'clients/{client}', query=query, state=state)
+        client = Client(self, r['clientId'],
+                        r['name'], r['code'], r['active'])
+        if fill:
+            client.fill()
+        return client

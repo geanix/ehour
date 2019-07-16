@@ -46,25 +46,46 @@ def clients(ctx, json_output, verbose, client_id, code):
     # Client IDs is an integer prefixed with 'CLT', so let's sort list based
     # on the id integer value
     clients.sort(key=lambda c: int(c.id[3:]))
+    print_list_of_elements_with_code_and_name(clients, json_output, verbose)
+
+
+@cli.command()
+@click.argument('CLIENT_ID')
+@click.option('--json', '-j', 'json_output', is_flag=True,
+              help='Output as JSON (default is simple human readable).')
+@click.option('--verbose', '-v', count=True,
+              help='Verbose output.')
+@click.pass_context
+def projects(ctx, client_id, json_output, verbose):
+    """Get list of projects for client (as specified by CLIENT_ID)."""
+    ehour = ctx.obj
+    client = ehour.client(client_id)
+    projects = client.projects()
+    print_list_of_elements_with_code_and_name(projects, json_output, verbose)
+
+
+def print_list_of_elements_with_code_and_name(elements, json_output, verbose):
     if not json_output and verbose == 0:
-        for c in clients:
-            print(f'{c.id}: {c.name} [{c.code}]')
+        for e in elements:
+            print(f'{e.id}: {e.name} [{e.code}]')
         return
-    clients = [vars(c) for c in clients]
+    elements = [vars(e) for e in elements]
     if verbose == 0:
         fields = ('id', 'code', 'name')
-        clients = [{k: v for k, v in c.items() if k in fields}
-                   for c in clients]
+        elements = [{k: v for k, v in e.items() if k in fields}
+                    for e in elements]
     if json_output:
-        print(json.dumps(clients))
+        print(json.dumps(elements))
         return
     # Verbose human readable output
-    for c in clients:
-        for k, v in c.items():
+    for e in elements:
+        for k, v in e.items():
             if v is None:
                 continue
             elif isinstance(v, list):
                 print(f'{k}:\n    ' + '\n    '.join(v))
+            elif type(v) not in (str, int, bool):
+                continue
             else:
                 print(f'{k}: {v}')
         print()

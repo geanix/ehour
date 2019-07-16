@@ -27,12 +27,21 @@ def test_content(response):
     # assert 'GitHub' in BeautifulSoup(response.content).title.string
 
 
-def test_command_line_interface():
+def test_cli():
     """Test the CLI."""
     runner = CliRunner()
-    result = runner.invoke(cli.main)
+    result = runner.invoke(cli.cli)
     assert result.exit_code == 0
-    assert 'ehour.cli.main' in result.output
-    help_result = runner.invoke(cli.main, ['--help'])
+    assert 'CLI interface for eHour 2' in result.output
+    help_result = runner.invoke(cli.cli, ['--help'])
     assert help_result.exit_code == 0
-    assert '--help  Show this message and exit.' in help_result.output
+    assert 'Usage: ehour [OPTIONS] COMMAND' in help_result.output
+
+
+def test_cli_clients():
+    """Test the CLI clients command."""
+    runner = CliRunner()
+    result = runner.invoke(cli.cli, ['-k', 'FOOBAR', 'clients', '--help'])
+    print(result.output)
+    assert result.exit_code == 0
+    assert 'Usage: ehour clients' in result.output

@@ -33,7 +33,7 @@ setup(
     description="Python Boilerplate contains all the boilerplate you need to create a Python package.",
     entry_points={
         'console_scripts': [
-            'ehour=ehour.cli:main',
+            'ehour=ehour.cli:cli',
         ],
     },
     install_requires=requirements,

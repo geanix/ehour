@@ -49,8 +49,9 @@ class EhourApi(object):
         response = self.get('clients', query=query, state=state)
         clients = []
         for r in response:
-            client = Client(r['clientId'], r['name'], r['code'], r['active'])
+            client = Client(self, r['clientId'],
+                            r['name'], r['code'], r['active'])
             if fill:
-                client.fill(self)
+                client.fill()
             clients.append(client)
         return clients

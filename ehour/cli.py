@@ -5,7 +5,7 @@ import sys
 import click
 import json
 
-from ehour.api import EhourApi
+import ehour.api
 
 
 @click.group(name='ehour')
@@ -23,7 +23,16 @@ def cli(ctx, api_key, config_file):
     eHour 2 is a cloud hosted timesheet management solution. See
     https://getehour.com for details.
     """
-    ctx.obj = EhourApi(key=api_key, config_file=config_file)
+    ctx.obj = {
+        'api-key': api_key,
+        'config-file': config_file,
+    }
+
+
+def connect(api_key, config_file):
+    api = ehour.api.API
+    api.connect(key=api_key, config_file=config_file)
+    return api
 
 
 @cli.command()
@@ -37,8 +46,9 @@ def cli(ctx, api_key, config_file):
               help='Filter on client code field.')
 @click.pass_context
 def clients(ctx, json_output, verbose, client_id, code):
-    ehour = ctx.obj
-    clients = ehour.clients(fill=verbose > 0)
+    """Show list of clients."""
+    ehour = connect(ctx.obj['api-key'], ctx.obj['config-file'])
+    clients = ehour.clients()
     if client_id:
         clients = [c for c in clients if c.id in client_id]
     if code:
@@ -50,17 +60,27 @@ def clients(ctx, json_output, verbose, client_id, code):
 
 
 @cli.command()
-@click.argument('CLIENT_ID')
+@click.option('--client', type=str,
+              help='List only projects for client (id).')
+@click.option('--inactive', is_flag=True,
+              help='Include inactive projects.')
 @click.option('--json', '-j', 'json_output', is_flag=True,
               help='Output as JSON (default is simple human readable).')
 @click.option('--verbose', '-v', count=True,
               help='Verbose output.')
 @click.pass_context
-def projects(ctx, client_id, json_output, verbose):
-    """Get list of projects for client (as specified by CLIENT_ID)."""
-    ehour = ctx.obj
-    client = ehour.client(client_id)
-    projects = client.projects()
+def projects(ctx, client, inactive, json_output, verbose):
+    """Show list of projects.
+
+    Use --client to show only projects for a given client (can be used
+    multiple times for a combined list of projects for more clients).
+    """
+    ehour = connect(ctx.obj['api-key'], ctx.obj['config-file'])
+    if client:
+        client = ehour.client(client)
+        projects = ehour.projects_for_client(client, only_active=not inactive)
+    else:
+        projects = ehour.projects(only_active=not inactive)
     print_list_of_elements_with_code_and_name(projects, json_output, verbose)
 
 

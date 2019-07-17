@@ -1,69 +1,113 @@
-import attr
+# -*- coding: utf-8 -*-
+"""Main eHour API module.
+
+Includes the EhourApi"""
+
 import urllib.parse
 import requests
 import configparser
 
-from typing import List, Union
+from typing import List, Optional
 
-from ehour.client import Client
+from ehour.model import Client, Project
 from ehour.exceptions import RestError
 
 
-@attr.s
 class EhourApi(object):
-    key = attr.ib(validator=attr.validators.instance_of(str))
-    base_url = attr.ib(default='https://ehourapp.com/api/v1/',
-                       validator=attr.validators.instance_of(str))
-    config_file = attr.ib(default=None)
 
-    def __attrs_post_init__(self) -> None:
-        if not self.config_file:
-            return
-        config = configparser.ConfigParser()
-        config.read_file(self.config_file)
-        self.config = config
+    def connect(self,
+                key: str,
+                base_url: str = 'https://ehourapp.com/api/v1/',
+                config_file=None) -> None:
+        self.session: requests.Session = requests.Session()
+        self.session.headers.update({'X-API-Key': key})
+        self.base_url = base_url
+        self.config: Optional[configparser.ConfigParser]
+        if config_file:
+            config = configparser.ConfigParser()
+            config.read_file(config_file)
+            self.config = config
+        else:
+            self.config = None
 
-    @property
-    def session(self) -> requests.Session:
-        try:
-            return self._session
-        except AttributeError:
-            self._session: requests.Session = requests.Session()
-            self._session.headers.update({'X-API-Key': self.key})
-            return self._session
-
-    def get_raw(self,
-                path: str,
-                **kwargs: str) -> requests.Response:
+    def get(self,
+            path: str,
+            **kwargs: str) -> requests.Response:
         url = urllib.parse.urljoin(self.base_url, path)
         rsp = self.session.get(url, params=kwargs)
         if not rsp.ok:
             raise RestError(rsp.status_code, rsp.reason)
         return rsp
 
-    def get(self,
-            path: str,
-            **kwargs: str) -> Union[dict, list]:
-        return self.get_raw(path, **kwargs).json()
+    def get_dict(self,
+                 path: str,
+                 **kwargs: str) -> dict:
+        rsp = self.get(path, **kwargs).json()
+        assert isinstance(rsp, dict)
+        return rsp
+
+    def get_list(self,
+                 path: str,
+                 **kwargs: str) -> list:
+        rsp = self.get(path, **kwargs).json()
+        assert isinstance(rsp, list)
+        return rsp
+
+    def client(self, client_id: str) -> Client:
+        client = Client(client_id)
+        client.update()
+        return client
 
     def clients(self,
-                query: str = None,
-                only_active: bool = True,
-                fill: bool = False) -> List[Client]:
-        response = self.get('clients',
-                            query=query or '',
-                            state='active' if only_active else 'all')
-        assert isinstance(response, list)
+                query: str = '',
+                only_active: bool = True) -> List[Client]:
+        kwargs = {'state': 'active' if only_active else 'all'}
+        if query:
+            kwargs['query'] = query
+        response = self.get_list('clients', **kwargs)
         clients = []
-        for r in response:
-            client = Client(self, r['clientId'],
-                            r['name'], r['code'], r['active'])
-            if fill:
-                client.fill()
+        for rsp in response:
+            client = Client.get(rsp['clientId'], code=rsp['code'],
+                                name=rsp['name'], active=rsp['active'])
+            client.update()
             clients.append(client)
         return clients
 
-    def client(self, client_id: str) -> Client:
-        client = Client(self, client_id)
-        client.fill()
-        return client
+    def project(self, project_id: str) -> Project:
+        project = Project(project_id)
+        project.update()
+        return project
+
+    def projects(self,
+                 query: str = None,
+                 only_active: bool = True) -> List[Project]:
+        kwargs = {'state': 'active' if only_active else 'all'}
+        if query:
+            kwargs['query'] = query
+        response = self.get_list('projects', **kwargs)
+        return self._projects(response)
+
+    def projects_for_client(self,
+                            client: Client,
+                            only_active: bool = True) -> List[Project]:
+        response = self.get_list(f'clients/{client.id}/projects')
+        projects = self._projects(response)
+        if only_active:
+            projects = [prj for prj in projects if prj.active]
+        return projects
+
+    def _projects(self, response: list) -> List[Project]:
+        projects = []
+        for rsp in response:
+            project = Project.get(rsp['projectId'], code=rsp['code'],
+                                  name=rsp['name'], active=rsp['active'])
+            project.update()
+            projects.append(project)
+        return projects
+
+
+# Singleton API instance.  Use this instance as the only one for easy access
+# from your entire codebase without having to pass it around.  The EhourApi
+# class is made for this, providing the EhourApi.connect() method to use for
+# connecting to the eHour cloud service.
+API = EhourApi()

@@ -7,7 +7,6 @@ import pytest
 
 from click.testing import CliRunner
 
-from ehour import ehour
 from ehour import cli
 
 

@@ -1,5 +1,7 @@
 import attr
 
+from typing import List
+
 from ehour.project import Project
 
 
@@ -11,7 +13,7 @@ class Client(object):
     code = attr.ib(default=None)
     active = attr.ib(default=None)
 
-    def fill(self):
+    def fill(self) -> None:
         response = self.api.get(f'clients/{self.id}')
         for k, v in response.items():
             if k in ('clientId', 'links'):
@@ -27,7 +29,7 @@ class Client(object):
                     pass        # Field name not configured
             setattr(self, k, v)
 
-    def projects(self):
+    def projects(self) -> List[Project]:
         response = self.api.get(f'clients/{self.id}/projects')
         projects = []
         for r in response:

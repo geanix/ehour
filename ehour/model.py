@@ -3,6 +3,7 @@
 
 import attr
 import configparser
+import datetime
 
 import ehour.api
 
@@ -163,3 +164,20 @@ class Project(Model):
             self.update()
         assert(self.name is not None)
         return self.name
+
+
+@attr.s(auto_attribs=True)
+class ReportEntry:
+
+    date: datetime.date = attr.ib(kw_only=True)
+    client: Client = attr.ib(kw_only=True)
+    project: Project = attr.ib(kw_only=True)
+    user: User = attr.ib(kw_only=True)
+
+
+@attr.s(auto_attribs=True)
+class Hours(ReportEntry):
+
+    hours: datetime.time = attr.ib(kw_only=True)
+    turnover: float = attr.ib(kw_only=True)
+    comment: str = attr.ib(kw_only=True)

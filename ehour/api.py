@@ -6,10 +6,11 @@ Includes the EhourApi"""
 import urllib.parse
 import requests
 import configparser
+import datetime
 
-from typing import List, Optional
+from typing import List, Dict, Optional, Any
 
-from ehour.model import User, Client, Project
+from ehour.model import User, Client, Project, Hours
 from ehour.exceptions import RestError
 
 
@@ -117,6 +118,68 @@ class EhourApi(object):
             project.update()
             projects.append(project)
         return projects
+
+    @staticmethod
+    def parse_date(date_str: str) -> datetime.date:
+        """Parse date in format DD/MM/YYYY."""
+        day, month, year = [int(i) for i in date_str.split('/')]
+        return datetime.date(year, month, day)
+
+    @staticmethod
+    def unpack_report_row(columns: List[str],
+                          data: List[str]) -> dict:
+        row: Dict[str, Any] = dict(zip(columns, data))
+        row['date'] = EhourApi.parse_date(row.pop('daily'))
+        if 'client-id' in row:
+            row['client'] = Client.get(row.pop('client-id'),
+                                       code=row.pop('client-code'),
+                                       name=row.pop('client-name'))
+        if 'project-id' in row:
+            row['project'] = Project.get(row.pop('project-id'),
+                                         code=row.pop('project-code'),
+                                         name=row.pop('project-name'))
+        if 'user-id' in row:
+            row['user'] = User.get(row.pop('user-id'),
+                                   name=row.pop('user-user'))
+        return row
+
+    def hours(self,
+              start: datetime.date,
+              end: datetime.date,
+              user: User = None,
+              client: Client = None,
+              project: Project = None) -> List[Hours]:
+        kwargs = {'start': start.isoformat(), 'end': end.isoformat()}
+        kwargs['columns'] = 'HOURS_HOURS,HOURS_TURNOVER,HOURS_COMMENT'
+        if user:
+            kwargs['userId'] = user.id
+        else:
+            kwargs['columns'] += ',USER_ID,USER_USER'
+        if client:
+            kwargs['clientId'] = client.id
+        else:
+            kwargs['columns'] += ',CLIENT_ID,CLIENT_CODE,CLIENT_NAME'
+        if project:
+            kwargs['projectId'] = project.id
+        else:
+            kwargs['columns'] += ',PROJECT_ID,PROJECT_CODE,PROJECT_NAME'
+        # TODO: handle pagination for reports with more than 10000 entries
+        rsp = self.get_dict('report', **kwargs)
+        columns = rsp['columns']
+        hours = []
+        for data in rsp['data']:
+            row = self.unpack_report_row(columns, data)
+            minutes = row.pop('hours-hours')
+            hours.append(Hours(
+                hours=datetime.time(minutes // 60, minutes % 60),
+                turnover=row.pop('hours-turnover'),
+                comment=row.pop('hours-comment'),
+                date=row.pop('date'),
+                client=client or row.pop('client'),
+                project=project or row.pop('project'),
+                user=user or row.pop('user'),
+            ))
+        return hours
 
 
 # Singleton API instance.  Use this instance as the only one for easy access

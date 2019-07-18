@@ -3,6 +3,7 @@
 """Console script for ehour."""
 import sys
 import click
+import datetime
 from tabulate import tabulate
 
 import ehour.api
@@ -126,6 +127,35 @@ def print_vertical(elements):
             else:
                 print(f'{key}: {value}')
         print()
+
+
+def validate_date(ctx, param, value):
+    """Callback for validation/conversion of date arguments."""
+    try:
+        return datetime.date.fromisoformat(value)
+    except ValueError:
+        raise click.BadParameter('date must be in format YYYY-MM-DD')
+
+
+@cli.command()
+@click.argument('start', callback=validate_date)
+@click.argument('end', callback=validate_date)
+@click.option('--user', type=str,
+              help='Only hours tracked for this user (id).')
+@click.option('--client', type=str,
+              help='Only hours tracked for this client (id).')
+@click.option('--project', type=str,
+              help='Only hours tracked on this project (id).')
+@click.pass_context
+def hours(ctx, start, end, client, user, project):
+    ehour = connect(ctx.obj['api-key'], ctx.obj['config-file'])
+    report = ehour.hours(start, end)
+    rows = [[hours.date.isoformat(), hours.client.name, hours.project.name,
+             hours.user.name, hours.hours.isoformat('minutes'), hours.turnover]
+            for hours in report]
+    headers = ['Date', 'Client', 'Project', 'User', 'Hours', 'Turnover']
+    colalign = ('left', 'left', 'left', 'left', 'center', 'right')
+    print(tabulate(rows, headers=headers, floatfmt='.2f', colalign=colalign))
 
 
 if __name__ == "__main__":

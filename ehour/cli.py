@@ -151,10 +151,12 @@ def hours(ctx, start, end, client, user, project):
     ehour = connect(ctx.obj['api-key'], ctx.obj['config-file'])
     report = ehour.hours(start, end)
     rows = [[hours.date.isoformat(), hours.client.name, hours.project.name,
-             hours.user.name, hours.hours.isoformat('minutes'), hours.turnover]
+             hours.user.name, hours.hours.isoformat('minutes'),
+             hours.rate, hours.turnover]
             for hours in report]
-    headers = ['Date', 'Client', 'Project', 'User', 'Hours', 'Turnover']
-    colalign = ('left', 'left', 'left', 'left', 'center', 'right')
+    headers = ['Date', 'Client', 'Project', 'User', 'Hours', 'Rate',
+               'Turnover']
+    colalign = ('left', 'left', 'left', 'left', 'center', 'right', 'right')
     print(tabulate(rows, headers=headers, floatfmt='.2f', colalign=colalign))
 
 

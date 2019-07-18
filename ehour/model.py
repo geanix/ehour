@@ -181,3 +181,4 @@ class Hours(ReportEntry):
     hours: datetime.time = attr.ib(kw_only=True)
     turnover: float = attr.ib(kw_only=True)
     comment: str = attr.ib(kw_only=True)
+    rate: float = attr.ib(kw_only=True)

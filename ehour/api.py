@@ -150,7 +150,8 @@ class EhourApi(object):
               client: Client = None,
               project: Project = None) -> List[Hours]:
         kwargs = {'start': start.isoformat(), 'end': end.isoformat()}
-        kwargs['columns'] = 'HOURS_HOURS,HOURS_TURNOVER,HOURS_COMMENT'
+        kwargs['columns'] = ('HOURS_HOURS,HOURS_TURNOVER,HOURS_COMMENT,'
+                             'ASSIGNMENT_RATE')
         if user:
             kwargs['userId'] = user.id
         else:
@@ -174,6 +175,7 @@ class EhourApi(object):
                 hours=datetime.time(minutes // 60, minutes % 60),
                 turnover=row.pop('hours-turnover'),
                 comment=row.pop('hours-comment'),
+                rate=row.pop('assignment-rate'),
                 date=row.pop('date'),
                 client=client or row.pop('client'),
                 project=project or row.pop('project'),

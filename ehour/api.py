@@ -9,7 +9,7 @@ import configparser
 
 from typing import List, Optional
 
-from ehour.model import Client, Project
+from ehour.model import User, Client, Project
 from ehour.exceptions import RestError
 
 
@@ -52,6 +52,19 @@ class EhourApi(object):
         rsp = self.get(path, **kwargs).json()
         assert isinstance(rsp, list)
         return rsp
+
+    def users(self, only_active: bool = True) -> List[User]:
+        response = self.get_list('users',
+                                 state='active' if only_active else 'all')
+        users = []
+        for rsp in response:
+            user = User.get(rsp['userId'], active=rsp['active'],
+                            firstName=rsp['firstName'],
+                            lastName=rsp['lastName'],
+                            email=rsp['email'])
+            user.update()
+            users.append(user)
+        return users
 
     def client(self, client_id: str) -> Client:
         client = Client(client_id)

@@ -4,6 +4,7 @@
 import sys
 import click
 import json
+from tabulate import tabulate
 
 import ehour.api
 
@@ -33,6 +34,24 @@ def connect(api_key, config_file):
     api = ehour.api.API
     api.connect(key=api_key, config_file=config_file)
     return api
+
+
+@cli.command()
+@click.option('--verbose', '-v', count=True,
+              help='Verbose output.')
+@click.option('--id', 'user_id', type=str, multiple=True,
+              help='Filter on user ID.')
+@click.pass_context
+def users(ctx, verbose, user_id):
+    ehour = connect(ctx.obj['api-key'], ctx.obj['config-file'])
+    users = ehour.users()
+    if user_id:
+        users = [u for u in users if u.id in user_id]
+    # User IDs is an integer prefixed with 'USR', so let's sort list based
+    # on the id integer value
+    users.sort(key=lambda c: int(c.id[3:]))
+    print(tabulate([[u.id, u.name, u.email] for u in users],
+                   headers=['Id', 'Name', 'Email']))
 
 
 @cli.command()

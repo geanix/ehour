@@ -71,8 +71,48 @@ class Model:
             if isinstance(value, dict) and 'clientId' in value:
                 value = Client.get(value['clientId'], code=value['code'],
                                    name=value['name'], active=value['active'])
+            if isinstance(value, dict) and 'userId' in value:
+                del value['links']
+                value = User.get(value.pop('userId'), **value)
             setattr(self, key, value)
         attr.validate(self)
+
+
+@attr.s
+class User(Model):
+    _cache: dict = {}  # derived class specific cache
+
+    firstName: str = attr.ib(default=None, repr=True, kw_only=True)
+    lastName: str = attr.ib(default=None, repr=True, kw_only=True)
+    name: str = attr.ib(default=None, kw_only=True)
+    email: str = attr.ib(default=None, kw_only=True)
+
+    def __attrs_post_init__(self) -> None:
+        self._update_name()
+
+    def _update_name(self) -> None:
+        if not getattr(self, 'name', None):
+            if self.firstName:
+                self.name = self.firstName
+                if self.lastName:
+                    self.name += f' {self.lastName}'
+            elif self.lastName:
+                self.name = self.lastName
+
+    def update(self) -> None:
+        super().update()
+        self._update_name()
+
+    @classmethod
+    def get(cls, id: str, **kwargs):
+        """Get unique Client instance."""
+        return cls._get(id, cls, **kwargs)
+
+    def __str__(self) -> str:
+        if self.name is None:
+            self.update()
+        assert(self.name is not None)
+        return self.name
 
 
 @attr.s
@@ -110,6 +150,7 @@ class Project(Model):
     budgetInMinutes: int = attr.ib(default=None, kw_only=True)
     contact: str = attr.ib(default=None, kw_only=True)
     description: str = attr.ib(default=None, kw_only=True)
+    projectManager: User = attr.ib(default=None, kw_only=True)
     client: Client = attr.ib(default=None, kw_only=True)
 
     @classmethod

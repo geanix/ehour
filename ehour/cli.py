@@ -7,6 +7,7 @@ import datetime
 from tabulate import tabulate
 
 import ehour.api
+from ehour.model import User, Client, Project
 
 
 @click.group(name='ehour')
@@ -147,9 +148,12 @@ def validate_date(ctx, param, value):
 @click.option('--project', type=str,
               help='Only hours tracked on this project (id).')
 @click.pass_context
-def hours(ctx, start, end, client, user, project):
+def hours(ctx, start, end, user, client, project):
     ehour = connect(ctx.obj['api-key'], ctx.obj['config-file'])
-    report = ehour.hours(start, end)
+    report = ehour.hours(start, end,
+                         user=User.get(user) if user else None,
+                         client=Client.get(client) if client else None,
+                         project=Project.get(project) if project else None)
     rows = [[hours.date.isoformat(), hours.client.name, hours.project.name,
              hours.user.name, hours.hours.isoformat('minutes'),
              hours.rate, hours.turnover]
@@ -170,9 +174,12 @@ def hours(ctx, start, end, client, user, project):
 @click.option('--project', type=str,
               help='Only expenses on this project (id).')
 @click.pass_context
-def expenses(ctx, start, end, client, user, project):
+def expenses(ctx, start, end, user, client, project):
     ehour = connect(ctx.obj['api-key'], ctx.obj['config-file'])
-    report = ehour.expenses(start, end)
+    report = ehour.expenses(start, end,
+                            user=User.get(user) if user else None,
+                            client=Client.get(client) if client else None,
+                            project=Project.get(project) if project else None)
     rows = [[exp.date.isoformat(), exp.client.name, exp.project.name,
              exp.user.name, exp.category.name, exp.name, exp.cost, exp.vat,
              exp.num_receipts if exp.num_receipts else '']

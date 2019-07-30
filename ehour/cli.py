@@ -160,5 +160,29 @@ def hours(ctx, start, end, client, user, project):
     print(tabulate(rows, headers=headers, floatfmt='.2f', colalign=colalign))
 
 
+@cli.command()
+@click.argument('start', callback=validate_date)
+@click.argument('end', callback=validate_date)
+@click.option('--user', type=str,
+              help='Only expenses for this user (id).')
+@click.option('--client', type=str,
+              help='Only expenses for this client (id).')
+@click.option('--project', type=str,
+              help='Only expenses on this project (id).')
+@click.pass_context
+def expenses(ctx, start, end, client, user, project):
+    ehour = connect(ctx.obj['api-key'], ctx.obj['config-file'])
+    report = ehour.expenses(start, end)
+    rows = [[exp.date.isoformat(), exp.client.name, exp.project.name,
+             exp.user.name, exp.category.name, exp.name, exp.cost, exp.vat,
+             exp.num_receipts if exp.num_receipts else '']
+            for exp in report]
+    headers = ['Date', 'Client', 'Project', 'User',
+               'Category', 'Name', 'Cost', 'VAT', 'Receipts']
+    colalign = ('left', 'left', 'left', 'left',
+                'left', 'left', 'right', 'right', 'center')
+    print(tabulate(rows, headers=headers, floatfmt='.2f', colalign=colalign))
+
+
 if __name__ == "__main__":
     sys.exit(cli())  # pragma: no cover

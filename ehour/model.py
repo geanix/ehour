@@ -5,6 +5,8 @@ import attr
 import configparser
 import datetime
 
+from typing import Dict
+
 import ehour.api
 
 
@@ -182,3 +184,31 @@ class Hours(ReportEntry):
     turnover: float = attr.ib(kw_only=True)
     comment: str = attr.ib(kw_only=True)
     rate: float = attr.ib(kw_only=True)
+
+
+@attr.s
+class ExpenseCategory:
+    code: str = attr.ib(kw_only=True)
+    name: str = attr.ib(kw_only=True)
+    billable: bool = attr.ib(kw_only=True)
+
+
+@attr.s(auto_attribs=True)
+class Expense(ReportEntry):
+
+    id: str = attr.ib(kw_only=True)
+    name: str = attr.ib(kw_only=True)
+    cost: float = attr.ib(kw_only=True)
+    vat: float = attr.ib(kw_only=True)
+    comment: str = attr.ib(kw_only=True)
+    category: ExpenseCategory = attr.ib(kw_only=True)
+    num_receipts: int = attr.ib(kw_only=True)
+    tag: str = attr.ib(kw_only=True)
+    custom1: str = attr.ib(kw_only=True)
+    custom2: str = attr.ib(kw_only=True)
+    custom3: str = attr.ib(kw_only=True)
+
+    def get_receipts(self) -> Dict[str, bytes]:
+        if self.num_receipts == 0:
+            return {}
+        return ehour.api.API.expense_receipts(self.id)
